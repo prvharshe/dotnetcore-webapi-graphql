@@ -3,18 +3,21 @@ using GraphQL;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SampleWebAPIApplication.Middlewares;
 using SampleWebAPIApplication.Middlewares.Builder;
+using SampleWebAPIApplication.Models;
+using SampleWebAPIApplication.Models.Context;
 using SampleWebAPIApplication.Models.Queries;
-//using SampleWebAPIApplication.Models.Types;
 using SampleWebAPIApplication.Repository;
 using SampleWebAPIApplication.Repository.Interface;
 using Serilog;
 using System;
+using System.IO;
 
 namespace SampleWebAPIApplication
 {
@@ -23,9 +26,11 @@ namespace SampleWebAPIApplication
         private readonly string AllowedOrigin = "allowedOrigin";
         public Startup(IWebHostEnvironment env)
         {
+
+            //string basePath = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
             //Configuration = configuration;
             var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
+                //.SetBasePath(basePath)
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
@@ -42,30 +47,22 @@ namespace SampleWebAPIApplication
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IConfiguration>(Configuration);
+            services.AddDbContext<TodoContext>(options =>
+             options.UseSqlServer(Configuration.GetConnectionString("AppDbContext")));
+            services.AddInMemorySubscriptions();
 
             //GraphQL services
-            services.AddSingleton<ITestRepository, TestRepository>();
-            services.AddSingleton<IServiceProvider>(_ => new
-            FuncServiceProvider(_.GetRequiredService));
-            //services.AddSingleton<IDocumentExecuter, DocumentExecuter>();
-            //services.AddSingleton<TodoService>();
-            //services.AddSingleton<TodoItemsType>();
-            //services.AddSingleton<TodoItemsQuery>();
-
             services
             .AddRouting()
             .AddGraphQLServer()
-            .AddQueryType<TodoItemsQuery>();
+            .AddQueryType<TodoItemsQuery>()
+            .AddMutationType<Mutation>()
+            .AddSubscriptionType<Subscription>();
 
-
-            //var sp = services.BuildServiceProvider();
-            //services.AddSingleton<ISchema>(new GraphQLTodoItemsSchema(new FuncServiceProvider(type => sp.GetService(type))));
-            //services.AddSingleton<GraphQLTodoItemsSchema>();
-
-            //services.AddGraphQL().AddGraphTypes(ServiceLifetime.Scoped);
-            //
-
+            services.AddScoped<TestRepository, TestRepository>();
+            services.AddScoped<ITestRepository, TestRepository>();
+            services.AddSingleton<IServiceProvider>(_ => new
+            FuncServiceProvider(_.GetRequiredService));
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddLogging(loggingBuilder =>
                 loggingBuilder.AddSerilog(dispose: true));
@@ -103,15 +100,6 @@ namespace SampleWebAPIApplication
 
             //GraphQL 
 
-            //app.UseGraphiQl("/graphql");
-            //app.UseGraphQL<ISchema>("/graphql");
-
-
-
-            //app.UseGraphiQl("/graphiql", "/graphql");
-            //app.UseGraphQL<GraphQLTodoItemsSchema>("/graphql");
-            //app.UseGraphQLWebSockets<GraphQLTodoItemsSchema>("/graphql");
-
             app.UseSwagger(c =>
             {
                 c.RouteTemplate = "TodoItems/swagger/{documentname}/swagger.json";
@@ -141,7 +129,7 @@ namespace SampleWebAPIApplication
                 .UseRouting()
                 .UseEndpoints(endpoints =>
                 {
-                    //endpoints.MapControllers();
+                    endpoints.MapControllers();
                     endpoints.MapGraphQL();
                 });
         }

@@ -1,0 +1,22 @@
+version: '3.4'
+
+services:
+  sampledb:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "reallyStrongPwd1994"
+    ports:
+        - "1433:1433"
+
+  samplewebapiapplication:
+    build:
+      context: .
+    ports:
+        - "8080:80"
+    depends_on: 
+      - sampledb
+
+    
+  
+      

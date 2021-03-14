@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SampleWebAPIApplication.Models;
+using SampleWebAPIApplication.Models.Entity;
 using SampleWebAPIApplication.Repository.Interface;
 using System;
 using System.Collections.Generic;
@@ -21,27 +22,30 @@ namespace SampleWebAPIApplication.Controllers
         }
 
         /// <summary>
-        /// 
+        ///Get all todo items 
         /// </summary>
         /// <returns></returns>
         // GET: api/TodoItems
         [HttpGet("GetTodoItems")]
-        public async Task<ActionResult<IEnumerable<TodoItem>>> GetTodoItems()
+        public async Task<ActionResult<List<TodoItemEntity>>> GetTodoItems()
         {
             //Call repository function fetching data from database.
             var itemsList = await _testRepository.GetTodoItems();
             return itemsList;
         }
 
-        // GET: api/TodoItems/5
+        /// <summary>
+        ///Get todo item by id
+        /// </summary>
+        // GET: api/TodoItem/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<TodoItem>> GetTodoItem(long id)
+        public async Task<ActionResult<TodoItemEntity>> GetTodoItem(long id)
         {
             //var todoItem = await 
 
             var todoItem = await _testRepository.GetTodoItem(id);
 
-            if(todoItem == null || todoItem.Value == null)
+            if (todoItem == null)
             {
                 return NotFound();
             }
@@ -49,10 +53,13 @@ namespace SampleWebAPIApplication.Controllers
             return todoItem;
         }
 
+        /// <summary>
+        ///Edit todo item
+        /// </summary>
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutTodoItem(long id, TodoItem todoItem)
+        public async Task<IActionResult> PutTodoItem(long id, TodoItemEntity todoItemEntity)
         {
-            if (id != todoItem.Id)
+            if (id != todoItemEntity.Id)
             {
                 return BadRequest();
             }
@@ -60,7 +67,7 @@ namespace SampleWebAPIApplication.Controllers
 
             try
             {
-                await _testRepository.PutTodoItem(todoItem);//_context.SaveChangesAsync();
+                await _testRepository.PutTodoItem(todoItemEntity);//_context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -70,14 +77,20 @@ namespace SampleWebAPIApplication.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        ///Add new todo item
+        /// </summary>
         // POST: api/TodoItems
         [HttpPost]
-        public async Task<ActionResult<TodoItem>> PostTodoItem(TodoItem todoItem)
+        public async Task<ActionResult<TodoItemEntity>> PostTodoItem(TodoItemEntity todoItemEntity)
         {
-            await _testRepository.PostTodoItem(todoItem);
-            return CreatedAtAction(nameof(GetTodoItem), new { id = todoItem.Id }, todoItem);
+            await _testRepository.PostTodoItem(todoItemEntity);
+            return CreatedAtAction(nameof(GetTodoItem), new { id = todoItemEntity.Id }, todoItemEntity);
         }
 
+        /// <summary>
+        ///Delete todo item
+        /// </summary>
         //DELETE: api/TodoItems/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTodoItem(int id)

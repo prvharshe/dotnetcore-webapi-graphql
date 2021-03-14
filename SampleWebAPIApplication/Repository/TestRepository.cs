@@ -12,102 +12,72 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using SampleWebAPIApplication.Models.Entity;
 
 namespace SampleWebAPIApplication.Repository
 {
-    public class TestRepository : BaseAsyncRepository, ITestRepository
+    public class TestRepository : ITestRepository//BaseAsyncRepository, ITestRepository
     {
         //private readonly TodoContext _context;
         private readonly IConfiguration _configuration;
+        private readonly TodoContext _sampleAppDbContext;
 
-        public TestRepository(IConfiguration configuration) : base(configuration)
+        public TestRepository(TodoContext sampleAppDbContext)
         {
-            //_context = context;
-            _configuration = configuration;
+            _sampleAppDbContext = sampleAppDbContext;
         }
 
-        public async Task<ActionResult<IEnumerable<TodoItem>>> GetTodoItems()
+        public async Task<List<TodoItemEntity>> GetTodoItems()
         {
-            List<TodoItem> ItemsList = new List<TodoItem>();
-
+            List<TodoItemEntity> ItemsList = new List<TodoItemEntity>();
             try
             {
                 Log.Information("Inside GetTodoItems: ");
-                using (DbConnection dbConnection = new SqlConnection(_configuration.GetSection("SQLServerDBInfo:ReaderConnectionString").Value))
-                {
-                    await dbConnection.OpenAsync();
-                    Log.Information("Db connection open");
-                    var result = await dbConnection.QueryAsync<TodoItem>(@"SELECT TOP (1000) [Id]
-                                                                         ,[Description]
-                                                                         ,[IsComplete]
-                                                                        FROM [TodoDb].[dbo].[Items]");
-
-
-                    if (result?.FirstOrDefault()?.Id != null)
-                    {
-                        ItemsList.Add(new TodoItem
-                        {
-                            Id = result.FirstOrDefault().Id,
-                            Description = result?.FirstOrDefault()?.Description,
-                            IsComplete = result.FirstOrDefault().IsComplete
-                        });
-                    }
-                    else
-                    {
-                        //ItemsList = new List<TodoItem>();
-                    }
-                }
+                return _sampleAppDbContext.Items.ToList();
             }
             catch (Exception ex)
             {
-                Log.Information("Error in GetTranspotersByContainerNumber : " + ex.Message.ToString());
+                Log.Information("Error in GetTodoItems : " + ex.Message.ToString());
                 var errorMessage = string.Format("Error encountered on server. Message:'{0}' when writing an object", ex.Message);
                 //Log in database
             }
             return ItemsList?.ToList();
         }
 
-        public async Task<int> DeleteTodoItem(int id)
+        public async Task<TodoItemEntity> DeleteTodoItem(int id)
         {
-            int result = 0;
-            if (!string.IsNullOrEmpty(id.ToString()))
+            Log.Information("Inside DeleteTodoItem: "+ id);
+            var items = _sampleAppDbContext.Items
+                    .Where(e => e.Id == id)
+                    .FirstOrDefault();
+
+            TodoItemEntity item = new TodoItemEntity();
+
+            if (items != null)
             {
-                using (DbConnection dbConnection = new SqlConnection(_configuration.GetSection("SQLServerDBInfo:ReaderConnectionString").Value))
-                {
-                    await dbConnection.OpenAsync();
-                    result = await dbConnection.ExecuteAsync(@"DELETE FROM dbo.Items where Id = @Id",
-                    new { Id = id });
-                }
+                item = _sampleAppDbContext.Items.Where(x => x.Id == id).First();
+                _sampleAppDbContext.Items.Remove(item);
+                await _sampleAppDbContext.SaveChangesAsync();
+                return item;
             }
-            return result;
+            return item;
         }
 
-        public async Task<ActionResult<TodoItem>> GetTodoItem(long id)
+        public async Task<TodoItemEntity> GetTodoItem(long id)
         {
-            TodoItem ItemList = new TodoItem();
+            TodoItemEntity ItemList = new TodoItemEntity();
 
             try
             {
-                Log.Information("GetTranspotersByContainerNumber Param : ");
-                using (DbConnection dbConnection = new SqlConnection(_configuration.GetSection("SQLServerDBInfo:ReaderConnectionString").Value))
-                {
-                    await dbConnection.OpenAsync();
-                    Log.Information("Db connection open");
-                    var result = await dbConnection.QueryAsync<TodoItem>(@"SELECT TOP (1000) [Id]
-                                                                         ,[Description]
-                                                                         ,[IsComplete]
-                                                                        FROM [TodoDb].[dbo].[Items] where Id =" + id);
+                Log.Information("Inside GetTodoItem Param : " + id);
+                var items = _sampleAppDbContext.Items
+                    .Where(e => e.Id == id)
+                    .FirstOrDefault();
 
+                if (items != null)
+                    return items;
 
-                    if (result?.FirstOrDefault()?.Id != null)
-                    {
-                        ItemList = result.FirstOrDefault();
-                    }
-                    else
-                    {
-                        //
-                    }
-                }
+                return null;
             }
             catch (Exception ex)
             {
@@ -118,71 +88,30 @@ namespace SampleWebAPIApplication.Repository
             return ItemList;
         }
 
-        public async Task<int> PostTodoItem(TodoItem todoItem)
+        public async Task<TodoItemEntity> PostTodoItem(TodoItemEntity todoItemEntity)
         {
-            int result = 0;
-
-            Log.Information("GetTranspotersByContainerNumber Param : ");
-            using (DbConnection dbConnection = new SqlConnection(_configuration.GetSection("SQLServerDBInfo:ReaderConnectionString").Value))
-            {
-                await dbConnection.OpenAsync();
-                Log.Information("Db connection open");
-                result = await dbConnection.ExecuteAsync(@"INSERT INTO dbo.Items(Id, Description, IsComplete) 
-                                    VALUES(@Id,@Description,@IsComplete)", todoItem);
-                //INSERT INTO dbo.Items(Id, Description, IsComplete) VALUES(1, 'Item 1', 0);
-            }
-            return result;
-            //_context.TodoItems.Add(todoItem);
-            //await _context.SaveChangesAsync();
-            //return null;
+            Log.Information("Inside PostTodoItem:");
+            await _sampleAppDbContext.Items.AddAsync(todoItemEntity);
+            await _sampleAppDbContext.SaveChangesAsync();
+            return todoItemEntity;
         }
 
-        public async Task<int> PutTodoItem(TodoItem todoItem)
+        public async Task<TodoItemEntity> PutTodoItem(TodoItemEntity todoItemEntity)
         {
-            using (DbConnection dbConnection = new SqlConnection(_configuration.GetSection("SQLServerDBInfo:ReaderConnectionString").Value))
+            Log.Information("Inside PutTodoItem:");
+            var items = _sampleAppDbContext.Items
+                    .Where(e => e.Id == todoItemEntity.Id)
+                    .FirstOrDefault();
+
+            if (items != null)
             {
-                int result = 0;
-                await dbConnection.OpenAsync();
-
-                var itemList = await dbConnection.QueryAsync<TodoItem>(@"SELECT Id,Description,IsComplete FROM dbo.Items WHERE
-                                                                                    Id = @Id",
-                                                                       new { Id = todoItem.Id });
-                var selectedItem = itemList.FirstOrDefault();
-                if (selectedItem != null)
-                {
-                    string updateQuery = string.Format("Update dbo.Items SET Description='{0}' , IsComplete = '{1}' WHERE Id = {2}", todoItem.Description, todoItem.IsComplete, todoItem.Id);
-                    result = await dbConnection.ExecuteAsync(updateQuery);
-                }
-                return result;
+                items.Description = todoItemEntity.Description;
+                items.IsComplete = todoItemEntity.IsComplete;
+                await _sampleAppDbContext.SaveChangesAsync();
+                return todoItemEntity;
             }
+
+            return todoItemEntity;
         }
-            //_context.Entry(todoItem).State = EntityState.Modified;
-
-            //var dbTodoItems = await _context.TodoItems.FindAsync(todoItem.Id);
-            //if (todoItem == null)
-            //{
-            //    return null;
-            //}
-
-            //dbTodoItems.Description = todoItem.Description;
-            //dbTodoItems.IsComplete = todoItem.IsComplete;
-
-            ////try
-            ////{
-            //await _context.SaveChangesAsync();
-            ////}
-
-            ////catch (DbUpdateConcurrencyException) when (!TodoItemExists(todoItem.Id))
-            ////{
-            ////    return null;
-            ////}
-
-            //return null;
-        //}
-
-        //private bool TodoItemExists(long id)
-        //{
-        //    return _context.TodoItems.Any(e => e.Id == id);
-        //}
     }
 }
