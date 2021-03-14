@@ -17,7 +17,7 @@ namespace SampleWebAPIApplication.Models.Queries
         public Task<List<TodoItemEntity>> AllTodoItemsOnly([Service] TestRepository testRepository) =>
             testRepository.GetTodoItems();
 
-        public async Task<TodoItemEntity> GetEmployeeById([Service] TestRepository testRepository,
+        public async Task<TodoItemEntity> GetTodoItemsById([Service] TestRepository testRepository,
             [Service]ITopicEventSender eventSender, int id)
         {
             TodoItemEntity gotItemById = await testRepository.GetTodoItem(id);
