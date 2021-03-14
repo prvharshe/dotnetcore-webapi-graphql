@@ -1,5 +1,7 @@
 # Running locally
 
+#### Pre-requisite - *Docker desktop is installed*
+
 1. Download/clone the repository `git clone https://github.com/prvharshe/dotnetcore-webapi-graphql.git`
 
 2. cd to SampleWebAPIApplication folder.
