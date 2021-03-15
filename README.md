@@ -4,7 +4,7 @@
 
 1. Download/clone the repository `git clone https://github.com/prvharshe/dotnetcore-webapi-graphql.git`
 
-2. cd to SampleWebAPIApplication folder.
+2. Open terminal/command prompt and cd to SampleWebAPIApplication folder.
 
 3. Run following 2 commands one after another in the terminal -
    
